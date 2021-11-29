@@ -1,0 +1,9 @@
+./baxter.sh archytas.local
+
+rosrun baxter_examples joint_position_keyboard.py
+
+rosrun forward_kinematics joint_pos.py
+
+rosrun tf tf_echo base left_hand
+
+

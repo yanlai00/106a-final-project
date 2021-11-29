@@ -1,0 +1,12 @@
+# we have done this already
+# catkin_create_pkg joint_ctrl rospy baxter_interface baxter_examples
+
+./baxter.sh ayrton.local
+
+rosrun joint_ctrl joint_pos.py
+rosrun tf tf_echo base left_hand
+
+# the hand we are using is left. Use that for the visualization 
+export ROS_MASTER_URI=http://ayrton.local:11311
+
+
