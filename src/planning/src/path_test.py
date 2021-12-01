@@ -19,6 +19,8 @@ import traceback
 from intera_interface import gripper as robot_gripper
 
 from moveit_msgs.msg import OrientationConstraint
+from moveit_msgs.msg import PositionConstraint
+
 from geometry_msgs.msg import PoseStamped
 
 from path_planner import PathPlanner
@@ -46,6 +48,14 @@ def main():
     print('Calibrating...')
     gripper.calibrate()
     rospy.sleep(2.0)
+    print('opening')
+    gripper.open()
+    rospy.sleep(1.0)
+    print('opened')
+    print('closing')
+    gripper.close()
+    rospy.sleep(1.0)
+    print('closed')
 
 
     ##
@@ -98,10 +108,19 @@ def main():
     orien_const.absolute_z_axis_tolerance = 0.2;
     orien_const.weight = 1.0;
 
+    orien_const_2 = PositionConstraint()
+    orien_const_2.link_name = "right_gripper_tip";
+    orien_const_2.header.frame_id = "base";
+    orien_const_2.target_point_offset.x = 0.6;
+    orien_const_2.target_point_offset.y = -0.3;
+    orien_const_2.target_point_offset.z = 0.0;
+    orien_const_2.weight = 1.0;
+
+
     while not rospy.is_shutdown():
         while not rospy.is_shutdown():
             try:
-                x, y, z = 0.770, -0.197, 0
+                x, y, z = 0.770, -0.197, 0.05
                 goal_1 = PoseStamped()
                 goal_1.header.frame_id = "base"
 
@@ -117,7 +136,7 @@ def main():
                 goal_1.pose.orientation.w = 0.0
 
                 # Might have to edit this . . . 
-                plan = planner.plan_to_pose(goal_1, [])
+                plan = planner.plan_to_pose(goal_1, [], [])
 
                 raw_input("Press <Enter> to move the right arm to goal pose 1: ")
                 if not planner.execute_plan(plan):
@@ -130,7 +149,7 @@ def main():
 
         while not rospy.is_shutdown():
             try:
-                x, y, z = 0.770, -0.197, -0.154
+                x, y, z = 0.770, -0.197, -0.1
                 goal_1 = PoseStamped()
                 goal_1.header.frame_id = "base"
 
@@ -146,7 +165,7 @@ def main():
                 goal_1.pose.orientation.w = 0.0
 
                 # Might have to edit this . . . 
-                plan = planner.plan_to_pose(goal_1, [])
+                plan = planner.plan_to_pose(goal_1, [orien_const], [])
 
                 raw_input("Press <Enter> to move the right arm to goal pose 2: ")
                 if not planner.execute_plan(plan):
@@ -171,9 +190,9 @@ def main():
                 goal_2.header.frame_id = "base"
 
                 #x, y, and z position
-                goal_2.pose.position.x = 0.774
-                goal_2.pose.position.y = -0.191
-                goal_2.pose.position.z = 0.0
+                goal_2.pose.position.x = 0.6
+                goal_2.pose.position.y = -0.3
+                goal_2.pose.position.z = 0
 
                 #Orientation as a quaternion
                 goal_2.pose.orientation.x = 1.0
@@ -181,7 +200,7 @@ def main():
                 goal_2.pose.orientation.z = 0.0
                 goal_2.pose.orientation.w = 0.0
 
-                plan = planner.plan_to_pose(goal_2, [])
+                plan = planner.plan_to_pose(goal_2, [orien_const], [])
 
                 raw_input("Press <Enter> to move the right arm to goal pose 3: ")
                 if not planner.execute_plan(plan):
@@ -191,31 +210,116 @@ def main():
             else:
                 break
 
-        # while not rospy.is_shutdown():
-        #     try:
-        #         goal_3 = PoseStamped()
-        #         goal_3.header.frame_id = "base"
+        while not rospy.is_shutdown():
+            try:
+                goal_3 = PoseStamped()
+                goal_3.header.frame_id = "base"
 
-        #         #x, y, and z position
-        #         goal_3.pose.position.x = 0.6
-        #         goal_3.pose.position.y = -0.1
-        #         goal_3.pose.position.z = 0.1
+                #x, y, and z position
+                goal_3.pose.position.x = 0.6
+                goal_3.pose.position.y = -0.3
+                goal_3.pose.position.z = 0.0
 
-        #         #Orientation as a quaternion
-        #         goal_3.pose.orientation.x = 1.0.#707
-        #         goal_3.pose.orientation.y = 0.0
-        #         goal_3.pose.orientation.z = 0.#707
-        #         goal_3.pose.orientation.w = 0.0
+                #Orientation as a quaternion
+                goal_3.pose.orientation.x = 0.909
+                goal_3.pose.orientation.y = -0.007
+                goal_3.pose.orientation.z = 0.132
+                goal_3.pose.orientation.w = -0.278
 
-        #         plan = planner.plan_to_pose(goal_3, [])
+                plan = planner.plan_to_pose(goal_3, [], [])
 
-        #         raw_input("Press <Enter> to move the right arm to goal pose 3: ")
-        #         if not planner.execute_plan(plan):
-        #             raise Exception("Execution failed")
-        #     except Exception as e:
-        #         print e
-        #     else:
-        #         break
+                raw_input("Press <Enter> to move the right arm to goal pose 3: ")
+                if not planner.execute_plan(plan):
+                    raise Exception("Execution failed")
+            except Exception as e:
+                print e
+            else:
+                break
+
+        while not rospy.is_shutdown():
+            try:
+                goal_3 = PoseStamped()
+                goal_3.header.frame_id = "base"
+
+                #x, y, and z position
+                goal_3.pose.position.x = 0.6
+                goal_3.pose.position.y = -0.3
+                goal_3.pose.position.z = 0.0
+
+                #Orientation as a quaternion
+                goal_3.pose.orientation.x = 0.909
+                goal_3.pose.orientation.y = -0.007
+                goal_3.pose.orientation.z = 0.132
+                goal_3.pose.orientation.w = -0.278
+
+                plan = planner.plan_to_pose(goal_3, [], [orien_const_2])
+
+                raw_input("Press <Enter> to move the right arm to goal pose 4: ")
+                if not planner.execute_plan(plan):
+                    raise Exception("Execution failed")
+            except Exception as e:
+                print e
+            else:
+                break
+
+        while not rospy.is_shutdown():
+            try:
+                goal_3 = PoseStamped()
+                goal_3.header.frame_id = "base"
+
+                #x, y, and z position
+                goal_3.pose.position.x = 0.6
+                goal_3.pose.position.y = -0.3
+                goal_3.pose.position.z = 0.0
+
+                #Orientation as a quaternion
+                goal_3.pose.orientation.x = -0.789
+                goal_3.pose.orientation.y = 0.131
+                goal_3.pose.orientation.z = -0.137
+                goal_3.pose.orientation.w = 0.584
+
+                plan = planner.plan_to_pose(goal_3, [], [orien_const_2])
+
+                raw_input("Press <Enter> to move the right arm to goal pose 5: ")
+                if not planner.execute_plan(plan):
+                    raise Exception("Execution failed")
+            except Exception as e:
+                print e
+            else:
+                break
+
+        while not rospy.is_shutdown():
+            try:
+                x, y, z = 0.770, -0.197, -0.1
+                goal_1 = PoseStamped()
+                goal_1.header.frame_id = "base"
+
+                #x, y, and z position
+                goal_1.pose.position.x = x
+                goal_1.pose.position.y = y
+                goal_1.pose.position.z = z
+
+                #Orientation as a quaternion
+                goal_1.pose.orientation.x = 1.0
+                goal_1.pose.orientation.y = 0.0
+                goal_1.pose.orientation.z = 0.0
+                goal_1.pose.orientation.w = 0.0
+
+                # Might have to edit this . . . 
+                plan = planner.plan_to_pose(goal_1, [orien_const], [])
+
+                raw_input("Press <Enter> to move the right arm to goal pose 6: ")
+                if not planner.execute_plan(plan):
+                    raise Exception("Execution failed")
+                print('opening')
+                gripper.open()
+                rospy.sleep(1.0)
+                print('opened')
+            except Exception as e:
+                print e
+                traceback.print_exc()
+            else:
+                break
 
 if __name__ == '__main__':
     rospy.init_node('moveit_node')
