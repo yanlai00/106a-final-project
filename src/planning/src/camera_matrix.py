@@ -30,18 +30,19 @@
 
 
 
-from autolab_core import RigidTransform 
+from autolab_core import RigidTransform
+import numpy as np
 
 # T_robot_world 
 trans = np.asarray([0.747, 0.114, -0.270])
-quat = np.asarray([[0.999, 0.012, -0.024, 0.019]])
+quat = np.asarray([0.999, 0.012, -0.024, 0.019])
 
 rot = RigidTransform.rotation_from_quaternion(quat)
 T_robot_world = RigidTransform(rotation=rot, translation=trans, from_frame="robot", to_frame="world")
 
 # T_camera_world 
-trans = [1.113, -0.276, -0.172]
-quat = [-0.175, -0.221, 0.544, 0.790]
+trans = np.asarray([1.113, -0.276, -0.172])
+quat = np.asarray([-0.175, -0.221, 0.544, 0.790])
 rot = RigidTransform.rotation_from_quaternion(quat)
 T_camera_world = RigidTransform(rotation=rot, translation=trans, from_frame="camera", to_frame="world")
 

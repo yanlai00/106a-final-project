@@ -127,7 +127,23 @@ def main():
                 #x, y, and z position
                 goal_1.pose.position.x = x
                 goal_1.pose.position.y = y
+                goal_1.pose.position.z = z        while not rospy.is_shutdown():
+            try:
+                x, y, z = 0.770, -0.197, -0.1
+                goal_1 = PoseStamped()
+                goal_1.header.frame_id = "base"
+
+                #x, y, and z position
+                goal_1.pose.position.x = x
+                goal_1.pose.position.y = y
                 goal_1.pose.position.z = z
+
+                #Orientation as a quaternion
+                goal_1.pose.orientation.x = 1.0
+                goal_1.pose.orientation.y = 0.0
+                goal_1.pose.orientation.z = 0.0
+                goal_1.pose.orientation.w = 0.0
+
 
                 #Orientation as a quaternion
                 goal_1.pose.orientation.x = 1.0
