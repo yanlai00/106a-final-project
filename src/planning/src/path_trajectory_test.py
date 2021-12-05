@@ -22,7 +22,7 @@ if sys.argv[1] == 'sawyer':
 else:
     from baxter_interface import gripper as robot_gripper
 
-from test_realsense import main as get_robot_pointcloud
+from test_realsense import get_robot_pointcloud
 
 def main(robo):
     # Wait for the IK service to become available
@@ -66,10 +66,142 @@ def main(robo):
     # CV Pipeline
     # Should return the position of the cup in robot frame
 
-    point_cloud_robot = get_robot_pointcloud()
-    target_position = point_cloud_robot[:][153600]
+    # point_cloud_world = get_robot_pointcloud()
+    # import pdb; pdb.set_trace()
+    point_cloud_robot, cup_left_top_pt_right_robot, cup_right_top_pt_right_robot = get_robot_pointcloud()
+    target_position_1 = cup_left_top_pt_right_robot.data
+    target_position_2 = cup_right_top_pt_right_robot.data
 
-    with open('/home/cc/ee106a/fl21/class/ee106a-aak/final/src/planning/src/trajectory.txt') as trajectory_txt:
+
+    try:
+        #x, y, and z position
+        request.ik_request.pose_stamped.pose.position.x = target_position_1[0]
+        request.ik_request.pose_stamped.pose.position.y = target_position_1[1]
+        request.ik_request.pose_stamped.pose.position.z = target_position_1[2] + 0.03
+
+        #Orientation as a quaternion
+        request.ik_request.pose_stamped.pose.orientation.x = 1.0
+        request.ik_request.pose_stamped.pose.orientation.y = 0.0
+        request.ik_request.pose_stamped.pose.orientation.z = 0.0
+        request.ik_request.pose_stamped.pose.orientation.w = 0.0
+
+        # Send the request to the service
+        response = compute_ik(request)
+        
+        # Print the response HERE
+        print(response)
+        group = MoveGroupCommander(arm + "_arm")
+
+        # Setting position and orientation target
+        group.set_pose_target(request.ik_request.pose_stamped)
+
+        # TRY THIS
+        # Setting just the position without specifying the orientation
+        ###group.set_position_target([0.5, 0.5, 0.0])
+
+        # Plan IK and execute
+        group.go()
+        
+    except rospy.ServiceException, e:
+        print "Service call failed: %s"%e
+        sys.exit()
+    
+    try:
+        #x, y, and z position
+        request.ik_request.pose_stamped.pose.position.x = target_position_1[0]
+        request.ik_request.pose_stamped.pose.position.y = target_position_1[1]
+        request.ik_request.pose_stamped.pose.position.z = target_position_1[2] - 0.04
+
+        #Orientation as a quaternion
+        request.ik_request.pose_stamped.pose.orientation.x = 1.0
+        request.ik_request.pose_stamped.pose.orientation.y = 0.0
+        request.ik_request.pose_stamped.pose.orientation.z = 0.0
+        request.ik_request.pose_stamped.pose.orientation.w = 0.0
+
+        # Send the request to the service
+        response = compute_ik(request)
+        
+        # Print the response HERE
+        print(response)
+        group = MoveGroupCommander(arm + "_arm")
+
+        # Setting position and orientation target
+        group.set_pose_target(request.ik_request.pose_stamped)
+
+        # TRY THIS
+        # Setting just the position without specifying the orientation
+        ###group.set_position_target([0.5, 0.5, 0.0])
+
+        # Plan IK and execute
+        group.go()
+    
+        print('Closing...')
+        right_gripper.close()
+        rospy.sleep(1.0)
+        
+    except rospy.ServiceException, e:
+        print "Service call failed: %s"%e
+        sys.exit()
+
+    try:
+        #x, y, and z position
+        request.ik_request.pose_stamped.pose.position.x = target_position_1[0]
+        request.ik_request.pose_stamped.pose.position.y = target_position_1[1]
+        request.ik_request.pose_stamped.pose.position.z = target_position_1[2] + 0.1
+
+        #Orientation as a quaternion
+        request.ik_request.pose_stamped.pose.orientation.x = 1.0
+        request.ik_request.pose_stamped.pose.orientation.y = 0.0
+        request.ik_request.pose_stamped.pose.orientation.z = 0.0
+        request.ik_request.pose_stamped.pose.orientation.w = 0.0
+
+        # Send the request to the service
+        response = compute_ik(request)
+        
+        # Print the response HERE
+        print(response)
+        group = MoveGroupCommander(arm + "_arm")
+
+        # Setting position and orientation target
+        group.set_pose_target(request.ik_request.pose_stamped)
+
+        # Plan IK and execute
+        group.go()
+        
+    except rospy.ServiceException, e:
+        print "Service call failed: %s"%e
+        sys.exit()
+
+    try:
+        #x, y, and z position
+        request.ik_request.pose_stamped.pose.position.x = target_position_2[0]
+        request.ik_request.pose_stamped.pose.position.y = target_position_2[1]
+        request.ik_request.pose_stamped.pose.position.z = target_position_2[2] + 0.1
+
+        #Orientation as a quaternion
+        request.ik_request.pose_stamped.pose.orientation.x = 1.0
+        request.ik_request.pose_stamped.pose.orientation.y = 0.0
+        request.ik_request.pose_stamped.pose.orientation.z = 0.0
+        request.ik_request.pose_stamped.pose.orientation.w = 0.0
+
+        # Send the request to the service
+        response = compute_ik(request)
+        
+        # Print the response HERE
+        print(response)
+        group = MoveGroupCommander(arm + "_arm")
+
+        # Setting position and orientation target
+        group.set_pose_target(request.ik_request.pose_stamped)
+
+        # Plan IK and execute
+        group.go()
+        
+    except rospy.ServiceException, e:
+        print "Service call failed: %s"%e
+        sys.exit()
+
+    with open('/home/cc/ee106a/fl21/class/ee106a-aak/final/src/planning/src/traj2.txt') as trajectory_txt:
         lines = trajectory_txt.readlines()
         lines = [line.rstrip() for line in lines]
 
@@ -89,13 +221,16 @@ def main(robo):
 
         for i, (trans, quat) in enumerate(zip(trans_list, quat_list)):
             if i == 0:
-                offset_x = target_position.x - float(trans[0])
-                offset_y = target_position.y - float(trans[1])
+                # import pdb; pdb.set_trace()
+                print(target_position_2)
+                offset_x = target_position_2[0] - float(trans[0])
+                offset_y = target_position_2[1] - float(trans[1])
+                # offset_z = target_position[2] - float(trans[2])
             try:
                 #x, y, and z position
                 request.ik_request.pose_stamped.pose.position.x = float(trans[0]) + offset_x
                 request.ik_request.pose_stamped.pose.position.y = float(trans[1]) + offset_y
-                request.ik_request.pose_stamped.pose.position.z = float(trans[2])
+                request.ik_request.pose_stamped.pose.position.z = float(trans[2]) # + offset_z
 
                 x,y,z,w = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
                 norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.5
@@ -131,10 +266,10 @@ def main(robo):
 
             # Close the right gripper
             rospy.sleep(0.1)
-            if i == 0:
-                print('Closing...')
-                right_gripper.close()
-                rospy.sleep(1.0)
+            # if i == 0:
+            #     print('Closing...')
+            #     right_gripper.close()
+            #     rospy.sleep(1.0)
 
 
 # Python's syntax for a main() method
