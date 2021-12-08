@@ -67,14 +67,18 @@ target_position_2 = cup_right_top_pt_right_robot.data
 
 webcam_im = webcam_im.data
 
-left, right = 425, 905
-bottom = 630
+left, right = None, None
+bottom = None
 if left is None or right is None or bottom is None:
+    print(webcam_im.shape)
     show(webcam_im)
     left = int(raw_input("Left edge index"))
     right = int(raw_input("right edge index"))
     bottom = int(raw_input("bottom edge index"))
 top = get_marker_edge(webcam_im, left, right, bottom, vis=False)
+
+LIQUID_THRESHOLD = 0.8
+stop_condition = lambda img: (get_percent_liquid(img, left, right, top, bottom, vis=False) > LIQUID_THRESHOLD)
 
 controller = Controller(Kp, Ki, Kd, Kw, Limb("right"))
 
@@ -147,6 +151,7 @@ def move_to_point_pid(group, target_position, target_orientation=[1.0, 0.0, 0.0,
             if orien_const:
                 plan = planner.plan_to_pose(goal_1, [orien_const], [])
             else:
+                # import pdb; pdb.set_trace()
                 plan = planner.plan_to_pose(goal_1, [], [])
 
             if not controller.execute_path(plan):
@@ -225,7 +230,7 @@ def move_to_point_sequence(group, target_positions, target_orientations):
 
             print("FRACTION", fraction)
 
-            execution_result = controller.execute_path(traj)
+            execution_result = controller.execute_path(traj, stop_condition=stop_condition)
 
             if not execution_result:
                 raise Exception("Execution failed")
@@ -241,13 +246,14 @@ def move_to_point_sequence(group, target_positions, target_orientations):
 def main(robo):
 
     group = MoveGroupCommander("right_arm")
-    group.set_max_acceleration_scaling_factor(0.1)
-    group.set_max_velocity_scaling_factor(0.1)
     move_to_point = move_to_point_pid
 
     print("go to neutral position")
     group.go(neutral_joint_state)
     print("arrived at neutral position")
+
+    group.set_max_acceleration_scaling_factor(0.1)
+    group.set_max_velocity_scaling_factor(0.1)
 
     orien_const = OrientationConstraint()
     orien_const.link_name = "right_gripper";
@@ -302,7 +308,7 @@ def main(robo):
         for i, (trans, quat) in enumerate(zip(trans_list, quat_list)):
 
             x,y,z,w = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
-            norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.4
+            norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.5
             x,y,z,w = x/norm, y/norm, z/norm, w/norm
 
             new_trans_list.append([float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z])
@@ -310,21 +316,28 @@ def main(robo):
 
         move_to_point_sequence(group, new_trans_list, new_quat_list)
 
-        rev_trans_list = []
-        rev_quat_list = []
+        x, y, z, w = float(quat_list[0][0]), float(quat_list[0][1]), float(quat_list[0][2]), float(quat_list[0][3])
+        norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.5
+        x,y,z,w = x/norm, y/norm, z/norm, w/norm
 
-        for i, (trans, quat) in enumerate(zip(trans_list[::-1][1:], quat_list[::-1][1:])):
+        move_to_point(group, [float(trans_list[0][0]) + offset_x, float(trans_list[0][1]) + offset_y, float(trans_list[0][2]) + offset_z], [x, y, z, w])
 
-            x,y,z,w = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
-            norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.5
-            x,y,z,w = x/norm, y/norm, z/norm, w/norm
 
-            rev_trans_list.append([float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z])
-            rev_quat_list.append([x, y, z, w])
+        # rev_trans_list = []
+        # rev_quat_list = []
 
-            # move_to_point(group, [float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z], [x, y, z, w])
+        # for i, (trans, quat) in enumerate(zip(trans_list[::-1][1:], quat_list[::-1][1:])):
+
+        #     x,y,z,w = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
+        #     norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.5
+        #     x,y,z,w = x/norm, y/norm, z/norm, w/norm
+
+        #     rev_trans_list.append([float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z])
+        #     rev_quat_list.append([x, y, z, w])
+
+        #     # move_to_point(group, [float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z], [x, y, z, w])
         
-        move_to_point_sequence(group, rev_trans_list, rev_quat_list)
+        # move_to_point_sequence(group, rev_trans_list, rev_quat_list)
 
 
     point_up_cup_left = target_position_2.copy() + np.array([0, 0, 0.12])

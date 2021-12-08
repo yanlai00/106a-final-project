@@ -104,7 +104,7 @@ class Controller(object):
         rospy.sleep(0.1)
         self.webcam_sensor.stop()       
 
-    def execute_path(self, path, timeout=100.0, log=True):
+    def execute_path(self, path, timeout=100.0, log=True, stop_condition=None):
         """
         Execute a given path
 
@@ -164,6 +164,13 @@ class Controller(object):
                 # Set velocities to zero
                 self._limb.set_joint_velocities(dict(itertools.izip(self._limb.joint_names(), np.zeros(len(self._limb.joint_names())))))
                 break
+
+            if stop_condition:
+                webcam_im, _ = self.webcam_sensor.frames()
+                webcam_im = webcam_im.data
+                if stop_condition(webcam_im):
+                    # self._limb.set_joint_velocities(dict(itertools.izip(self._limb.joint_names(), np.zeros(len(self._limb.joint_names())))))
+                    break
 
         return True
 

@@ -9,13 +9,14 @@ def mask_edge(img, get_marker=True):
     if get_marker:
         mask_entries = np.where(np.all(img<100, axis=-1)) # coke 
     else:
-        mask_entries = np.where(img[:, :, 0] < 125)
+        mask_entries = np.where(img[:, :, 2]<70)
     edges[mask_entries] = 1
     y_idx, x_idx = mask_entries
     if get_marker:
         bottom_pt = np.max(y_idx), np.mean(x_idx).astype(int)
     else: 
-        bottom_pt = np.min(y_idx), np.mean(x_idx).astype(int)
+        # bottom_pt = np.min(y_idx), np.mean(x_idx).astype(int)
+        bottom_pt = None
     return edges, bottom_pt
 
 def preprocess_img(img, left, right, top, bottom):
@@ -52,7 +53,9 @@ def get_percent_liquid(img, left, right, top, bottom, vis=False):
     edges, bottom_pt = mask_edge(img, get_marker=False)
     if vis:
         show(edges, bottom_pt)
-    return get_percentage(edges)
+    percent = get_percentage(edges)
+    print(percent)
+    return percent
 
 if __name__ == "__main__":
     # # preprocess empty cup
@@ -69,10 +72,10 @@ if __name__ == "__main__":
 
     # post empty cup 
     # img_path = "/home/cc/ee106a/fl21/class/ee106a-aak/Desktop/2021-12-07-030232.jpg"
-    img_path = "/home/cc/ee106a/fl21/class/ee106a-aak/Desktop/2021-12-08-040115.jpg"
+    img_path = "/home/cc/ee106a/fl21/class/ee106a-aak/Desktop/2021-12-08-054647.jpg"
     img = cv2.imread(img_path)
-    left, right = 634, 1269
-    top, bottom = 0, 1068
+    left, right = 649, 1250
+    top, bottom = 0, 998
     if left is None or right is None or bottom is None:
         show(img)
         left = int(raw_input("Left edge index"))
