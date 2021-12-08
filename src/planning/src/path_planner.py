@@ -57,7 +57,10 @@ class PathPlanner(object):
         self._group = moveit_commander.MoveGroupCommander(group_name)
 
         # Set the maximum time MoveIt will try to plan before giving up
-        self._group.set_planning_time(5)
+        self._group.set_planning_time(10)
+
+        self._group.set_max_acceleration_scaling_factor(0.1)
+        self._group.set_max_velocity_scaling_factor(0.1)
 
         # Set the bounds of the workspace
         self._group.set_workspace([-2, -2, -2, 2, 2, 2])

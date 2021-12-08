@@ -156,40 +156,6 @@ class Controller(object):
                 self._limb.set_joint_velocities(dict(itertools.izip(self._limb.joint_names(), np.zeros(len(self._limb.joint_names())))))
                 break
 
-        if log:
-            import matplotlib.pyplot as plt
-
-            times = np.array(self._times)
-            actual_positions = np.array(self._actual_positions)
-            actual_velocities = np.array(self._actual_velocities)
-            target_positions = np.array(self._target_positions)
-            target_velocities = np.array(self._target_velocities)
-            plt.figure()
-            joint_num = len(self._path.joint_trajectory.joint_names)
-            for joint in range(joint_num):
-                plt.subplot(joint_num,2,2*joint+1)
-                plt.plot(times, actual_positions[:,joint], label='Actual')
-                plt.plot(times, target_positions[:,joint], label='Desired')
-                plt.xlabel("Time (t)")
-                if(joint is 0):
-                    plt.ylabel(self._path.joint_trajectory.joint_names[joint] + " Position Error")
-                else:
-                    plt.ylabel(self._path.joint_trajectory.joint_names[joint])
-                plt.legend()
-
-                plt.subplot(joint_num,2,2*joint+2)
-                plt.plot(times, actual_velocities[:,joint], label='Actual')
-                plt.plot(times, target_velocities[:,joint], label='Desired')
-                plt.xlabel("Time (t)")
-                if(joint is 0):
-                    plt.ylabel(self._path.joint_trajectory.joint_names[joint] + " Velocity Error")
-                else:
-                    plt.ylabel(self._path.joint_trajectory.joint_names[joint])
-                plt.legend()
-
-            print "Close the plot window to continue"
-            plt.show()
-
         return True
 
     def step_control(self, t):
@@ -206,6 +172,8 @@ class Controller(object):
         # Make sure you're using the latest time
         while (not rospy.is_shutdown() and self._curIndex < self._maxIndex and self._path.joint_trajectory.points[self._curIndex+1].time_from_start.to_sec() < t+0.001):
             self._curIndex = self._curIndex+1
+        
+        # import pdb; pdb.set_trace()
 
 
         current_position = np.array([self._limb.joint_angles()[joint_name] for joint_name in self._path.joint_trajectory.joint_names])

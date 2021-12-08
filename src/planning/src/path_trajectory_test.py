@@ -15,193 +15,244 @@ from geometry_msgs.msg import PoseStamped
 from moveit_commander import MoveGroupCommander
 import numpy as np
 from numpy import linalg
-import sys
 
-if sys.argv[1] == 'sawyer':
-    from intera_interface import gripper as robot_gripper
-else:
-    from baxter_interface import gripper as robot_gripper
+from intera_interface import gripper as robot_gripper
 
 from test_realsense import get_robot_pointcloud
+from utils import open_gripper, close_gripper, concatenate_plan
+import traceback
+
+from moveit_msgs.msg import OrientationConstraint
+from moveit_msgs.msg import RobotState
+from sensor_msgs.msg import JointState
+from geometry_msgs.msg import PoseStamped
+
+from path_planner import PathPlanner
+from controller_pid import Controller
+
+import copy
+import moveit_commander
+import moveit_msgs.msg
+import geometry_msgs.msg as geom
+from math import pi
+from std_msgs.msg import String
+from moveit_commander.conversions import pose_to_list
+
+rospy.wait_for_service('compute_ik')
+rospy.init_node('service_query')
+compute_ik = rospy.ServiceProxy('compute_ik', GetPositionIK)
+arm = 'right'
+
+# If a Sawyer does not have a gripper, replace '_gripper_tip' with '_wrist' instead
+link = "right_gripper_tip"
+
+# Set up the right gripper
+right_gripper = robot_gripper.Gripper('right_gripper')
+
+planner = PathPlanner("right_arm")
+
+Kp = 0.2 * np.array([0.4, 2, 1.7, 1.5, 2, 2, 3])
+Kd = 0.01 * np.array([2, 1, 2, 0.5, 0.8, 0.8, 0.8])
+Ki = 0.01 * np.array([1.4, 1.4, 1.4, 1, 0.6, 0.6, 0.6])
+Kw = np.array([0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9])
+
+controller = Controller(Kp, Ki, Kd, Kw, Limb("right"))
+
+# Calibrate the gripper (other commands won't work unless you do this first)
+print('Calibrating...')
+right_gripper.calibrate()
+rospy.sleep(1.0)
+
+# Open the right gripper
+print('Opening...')
+right_gripper.open()
+rospy.sleep(1.0)
+print('Done!')
+
+def move_to_point_ik(group, target_position, target_orientation=[1.0, 0.0, 0.0, 0.0]):
+    try:
+        request = GetPositionIKRequest()
+        request.ik_request.group_name = arm + "_arm"
+
+        request.ik_request.ik_link_name = link
+        request.ik_request.attempts = 20
+        request.ik_request.pose_stamped.header.frame_id = "base"
+
+        #x, y, and z position
+        request.ik_request.pose_stamped.pose.position.x = target_position[0]
+        request.ik_request.pose_stamped.pose.position.y = target_position[1]
+        request.ik_request.pose_stamped.pose.position.z = target_position[2]
+
+        #Orientation as a quaternion
+        request.ik_request.pose_stamped.pose.orientation.x = target_orientation[0]
+        request.ik_request.pose_stamped.pose.orientation.y = target_orientation[1]
+        request.ik_request.pose_stamped.pose.orientation.z = target_orientation[2]
+        request.ik_request.pose_stamped.pose.orientation.w = target_orientation[3]
+
+        # Send the request to the service
+        response = compute_ik(request)
+        
+        # Print the response HERE
+        print(response)
+
+        # Setting position and orientation target
+        group.set_pose_target(request.ik_request.pose_stamped)
+
+        # Plan IK and execute
+        group.go()
+        
+    except rospy.ServiceException, e:
+        print "Service call failed: %s"%e
+        sys.exit()
+
+def move_to_point_pid(group, target_position, target_orientation=[1.0, 0.0, 0.0, 0.0], orien_const=None):
+    while not rospy.is_shutdown():
+        try:
+            x, y, z = target_position
+            goal_1 = PoseStamped()
+            goal_1.header.frame_id = "base"
+
+            #x, y, and z position
+            goal_1.pose.position.x = x
+            goal_1.pose.position.y = y
+            goal_1.pose.position.z = z
+
+            #Orientation as a quaternion
+            x, y, z, w = target_orientation
+            goal_1.pose.orientation.x = x
+            goal_1.pose.orientation.y = y
+            goal_1.pose.orientation.z = z
+            goal_1.pose.orientation.w = w
+
+            if orien_const:
+                plan = planner.plan_to_pose(goal_1, [orien_const], [])
+            else:
+                plan = planner.plan_to_pose(goal_1, [], [])
+
+            if not controller.execute_path(plan):
+                raise Exception("Execution failed")
+        except Exception as e:
+            print e
+            traceback.print_exc()
+        else:
+            break
+
+def move_to_point_sequence(group, target_positions, target_orientations):
+    while not rospy.is_shutdown():
+        try:
+            assert len(target_positions) == len(target_orientations)
+
+            waypoints = []
+
+            for i, (target_position, target_orientation) in enumerate(zip(target_positions, target_orientations)):
+                x, y, z = target_position
+                goal_1 = geom.Pose()
+
+                #x, y, and z position
+                goal_1.position.x = x
+                goal_1.position.y = y
+                goal_1.position.z = z
+
+                #Orientation as a quaternion
+                x, y, z, w = target_orientation
+                goal_1.orientation.x = x
+                goal_1.orientation.y = y
+                goal_1.orientation.z = z
+                goal_1.orientation.w = w
+
+                waypoints.append(goal_1)
+            
+            # import pdb; pdb.set_trace()
+
+            (full_plan, fraction) = group.compute_cartesian_path(waypoints, 0.005, 0.0)
+
+            # plans = []
+            # for i, (target_position, target_orientation) in enumerate(zip(target_positions, target_orientations)):
+            #     x, y, z = target_position
+            #     goal_1 = PoseStamped()
+            #     goal_1.header.frame_id = "base"
+
+            #     #x, y, and z position
+            #     goal_1.pose.position.x = x
+            #     goal_1.pose.position.y = y
+            #     goal_1.pose.position.z = z
+
+            #     #Orientation as a quaternion
+            #     x, y, z, w = target_orientation
+            #     goal_1.pose.orientation.x = x
+            #     goal_1.pose.orientation.y = y
+            #     goal_1.pose.orientation.z = z
+            #     goal_1.pose.orientation.w = w
+
+            #     # Might have to edit this . . . 
+            #     plan = planner.plan_to_pose(goal_1, [], [])
+            #     plans.append(plan)
+
+            #     print(i)
+            
+            # assert len(plans) == len(target_positions)
+            
+            # full_plan = concatenate_plan(plans)
+
+            # print(group.get_current_pose("right_gripper_tip").pose)
+
+            moveit_robot_state = RobotState()
+            joint_state = JointState()
+            joint_state.name = group.get_active_joints()
+            joint_state.position = group.get_current_joint_values()
+            moveit_robot_state.joint_state = joint_state
+            traj = group.retime_trajectory(moveit_robot_state, full_plan, 0.1)
+
+            print("FRACTION", fraction)
+
+            execution_result = controller.execute_path(traj)
+
+            if not execution_result:
+                raise Exception("Execution failed")
+    
+        except Exception as e:
+            print e
+            traceback.print_exc()
+        else:
+            break
+
+
 
 def main(robo):
-    # Wait for the IK service to become available
-    rospy.wait_for_service('compute_ik')
-    rospy.init_node('service_query')
-    arm = 'left'
-    # Create the function used to call the service
-    compute_ik = rospy.ServiceProxy('compute_ik', GetPositionIK)
-    if robo == 'sawyer':
-        arm = 'right'
 
-    raw_input('Press [ Enter ]: ')
-    
-    # Construct the request
-    request = GetPositionIKRequest()
-    request.ik_request.group_name = arm + "_arm"
-
-    # If a Sawyer does not have a gripper, replace '_gripper_tip' with '_wrist' instead
-    link = arm + "_gripper"
-    if robo == 'sawyer':
-        link += '_tip'
-
-    request.ik_request.ik_link_name = link
-    request.ik_request.attempts = 20
-    request.ik_request.pose_stamped.header.frame_id = "base"
-    
-    # Set up the right gripper
-    right_gripper = robot_gripper.Gripper('right')
-
-    # Calibrate the gripper (other commands won't work unless you do this first)
-    print('Calibrating...')
-    right_gripper.calibrate()
-    rospy.sleep(2.0)
-
-    # Open the right gripper
-    print('Opening...')
-    right_gripper.open()
-    rospy.sleep(1.0)
-    print('Done!')
-
-    # CV Pipeline
-    # Should return the position of the cup in robot frame
-
-    # point_cloud_world = get_robot_pointcloud()
-    # import pdb; pdb.set_trace()
     point_cloud_robot, cup_left_top_pt_right_robot, cup_right_top_pt_right_robot = get_robot_pointcloud()
     target_position_1 = cup_left_top_pt_right_robot.data
     target_position_2 = cup_right_top_pt_right_robot.data
 
+    group = MoveGroupCommander("right_arm")
+    group.set_max_acceleration_scaling_factor(0.1)
+    group.set_max_velocity_scaling_factor(0.1)
+    move_to_point = move_to_point_pid
 
-    try:
-        #x, y, and z position
-        request.ik_request.pose_stamped.pose.position.x = target_position_1[0]
-        request.ik_request.pose_stamped.pose.position.y = target_position_1[1]
-        request.ik_request.pose_stamped.pose.position.z = target_position_1[2] + 0.03
+    orien_const = OrientationConstraint()
+    orien_const.link_name = "right_gripper";
+    orien_const.header.frame_id = "base";
+    orien_const.orientation.x = 1.0;
+    orien_const.absolute_x_axis_tolerance = 0.1;
+    orien_const.absolute_y_axis_tolerance = 0.1;
+    orien_const.absolute_z_axis_tolerance = 0.1;
+    orien_const.weight = 1.0;
 
-        #Orientation as a quaternion
-        request.ik_request.pose_stamped.pose.orientation.x = 1.0
-        request.ik_request.pose_stamped.pose.orientation.y = 0.0
-        request.ik_request.pose_stamped.pose.orientation.z = 0.0
-        request.ik_request.pose_stamped.pose.orientation.w = 0.0
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.1])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0])
 
-        # Send the request to the service
-        response = compute_ik(request)
-        
-        # Print the response HERE
-        print(response)
-        group = MoveGroupCommander(arm + "_arm")
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, -0.07])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
 
-        # Setting position and orientation target
-        group.set_pose_target(request.ik_request.pose_stamped)
+    close_gripper(right_gripper)
 
-        # TRY THIS
-        # Setting just the position without specifying the orientation
-        ###group.set_position_target([0.5, 0.5, 0.0])
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.12])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
 
-        # Plan IK and execute
-        group.go()
-        
-    except rospy.ServiceException, e:
-        print "Service call failed: %s"%e
-        sys.exit()
-    
-    try:
-        #x, y, and z position
-        request.ik_request.pose_stamped.pose.position.x = target_position_1[0]
-        request.ik_request.pose_stamped.pose.position.y = target_position_1[1]
-        request.ik_request.pose_stamped.pose.position.z = target_position_1[2] - 0.04
+    point_up_cup_left = target_position_2.copy() + np.array([0, 0, 0.12])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
 
-        #Orientation as a quaternion
-        request.ik_request.pose_stamped.pose.orientation.x = 1.0
-        request.ik_request.pose_stamped.pose.orientation.y = 0.0
-        request.ik_request.pose_stamped.pose.orientation.z = 0.0
-        request.ik_request.pose_stamped.pose.orientation.w = 0.0
-
-        # Send the request to the service
-        response = compute_ik(request)
-        
-        # Print the response HERE
-        print(response)
-        group = MoveGroupCommander(arm + "_arm")
-
-        # Setting position and orientation target
-        group.set_pose_target(request.ik_request.pose_stamped)
-
-        # TRY THIS
-        # Setting just the position without specifying the orientation
-        ###group.set_position_target([0.5, 0.5, 0.0])
-
-        # Plan IK and execute
-        group.go()
-    
-        print('Closing...')
-        right_gripper.close()
-        rospy.sleep(1.0)
-        
-    except rospy.ServiceException, e:
-        print "Service call failed: %s"%e
-        sys.exit()
-
-    try:
-        #x, y, and z position
-        request.ik_request.pose_stamped.pose.position.x = target_position_1[0]
-        request.ik_request.pose_stamped.pose.position.y = target_position_1[1]
-        request.ik_request.pose_stamped.pose.position.z = target_position_1[2] + 0.1
-
-        #Orientation as a quaternion
-        request.ik_request.pose_stamped.pose.orientation.x = 1.0
-        request.ik_request.pose_stamped.pose.orientation.y = 0.0
-        request.ik_request.pose_stamped.pose.orientation.z = 0.0
-        request.ik_request.pose_stamped.pose.orientation.w = 0.0
-
-        # Send the request to the service
-        response = compute_ik(request)
-        
-        # Print the response HERE
-        print(response)
-        group = MoveGroupCommander(arm + "_arm")
-
-        # Setting position and orientation target
-        group.set_pose_target(request.ik_request.pose_stamped)
-
-        # Plan IK and execute
-        group.go()
-        
-    except rospy.ServiceException, e:
-        print "Service call failed: %s"%e
-        sys.exit()
-
-    try:
-        #x, y, and z position
-        request.ik_request.pose_stamped.pose.position.x = target_position_2[0]
-        request.ik_request.pose_stamped.pose.position.y = target_position_2[1]
-        request.ik_request.pose_stamped.pose.position.z = target_position_2[2] + 0.1
-
-        #Orientation as a quaternion
-        request.ik_request.pose_stamped.pose.orientation.x = 1.0
-        request.ik_request.pose_stamped.pose.orientation.y = 0.0
-        request.ik_request.pose_stamped.pose.orientation.z = 0.0
-        request.ik_request.pose_stamped.pose.orientation.w = 0.0
-
-        # Send the request to the service
-        response = compute_ik(request)
-        
-        # Print the response HERE
-        print(response)
-        group = MoveGroupCommander(arm + "_arm")
-
-        # Setting position and orientation target
-        group.set_pose_target(request.ik_request.pose_stamped)
-
-        # Plan IK and execute
-        group.go()
-        
-    except rospy.ServiceException, e:
-        print "Service call failed: %s"%e
-        sys.exit()
-
-    with open('/home/cc/ee106a/fl21/class/ee106a-aak/final/src/planning/src/traj2.txt') as trajectory_txt:
+    with open('/home/cc/ee106a/fl21/class/ee106a-aak/final/src/planning/src/traj3.txt') as trajectory_txt:
         lines = trajectory_txt.readlines()
         lines = [line.rstrip() for line in lines]
 
@@ -219,57 +270,56 @@ def main(robo):
                 quat = quat.split(', ')
                 quat_list.append(quat)
 
+        # import pdb; pdb.set_trace()
+        print(target_position_2)
+        offset_x = target_position_2[0] - float(trans_list[0][0])
+        offset_y = target_position_2[1] - float(trans_list[0][1])
+        offset_z = 0.04
+
+        new_trans_list = []
+        new_quat_list = []
+
         for i, (trans, quat) in enumerate(zip(trans_list, quat_list)):
-            if i == 0:
-                # import pdb; pdb.set_trace()
-                print(target_position_2)
-                offset_x = target_position_2[0] - float(trans[0])
-                offset_y = target_position_2[1] - float(trans[1])
-                # offset_z = target_position[2] - float(trans[2])
-            try:
-                #x, y, and z position
-                request.ik_request.pose_stamped.pose.position.x = float(trans[0]) + offset_x
-                request.ik_request.pose_stamped.pose.position.y = float(trans[1]) + offset_y
-                request.ik_request.pose_stamped.pose.position.z = float(trans[2]) # + offset_z
 
-                x,y,z,w = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
-                norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.5
-                x,y,z,w = x/norm, y/norm, z/norm, w/norm
-                print(x, y, z, w)
+            x,y,z,w = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
+            norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.4
+            x,y,z,w = x/norm, y/norm, z/norm, w/norm
 
-                #Orientation as a quaternion
-                request.ik_request.pose_stamped.pose.orientation.x = x
-                request.ik_request.pose_stamped.pose.orientation.y = y
-                request.ik_request.pose_stamped.pose.orientation.z = z
-                request.ik_request.pose_stamped.pose.orientation.w = w
+            new_trans_list.append([float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z])
+            new_quat_list.append([x, y, z, w])
 
-                # Send the request to the service
-                response = compute_ik(request)
-                
-                # Print the response HERE
-                print(response)
-                group = MoveGroupCommander(arm + "_arm")
+        move_to_point_sequence(group, new_trans_list, new_quat_list)
 
-                # Setting position and orientation target
-                group.set_pose_target(request.ik_request.pose_stamped)
+        rev_trans_list = []
+        rev_quat_list = []
 
-                # TRY THIS
-                # Setting just the position without specifying the orientation
-                ###group.set_position_target([0.5, 0.5, 0.0])
+        for i, (trans, quat) in enumerate(zip(trans_list[::-1][1:], quat_list[::-1][1:])):
 
-                # Plan IK and execute
-                group.go()
-                
-            except rospy.ServiceException, e:
-                print "Service call failed: %s"%e
-                sys.exit()
+            x,y,z,w = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
+            norm = (x ** 2 + y ** 2 + z ** 2 + w ** 2) ** 0.5
+            x,y,z,w = x/norm, y/norm, z/norm, w/norm
 
-            # Close the right gripper
-            rospy.sleep(0.1)
-            # if i == 0:
-            #     print('Closing...')
-            #     right_gripper.close()
-            #     rospy.sleep(1.0)
+            rev_trans_list.append([float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z])
+            rev_quat_list.append([x, y, z, w])
+
+            # move_to_point(group, [float(trans[0]) + offset_x, float(trans[1]) + offset_y, float(trans[2]) + offset_z], [x, y, z, w])
+        
+        move_to_point_sequence(group, rev_trans_list, rev_quat_list)
+
+
+    point_up_cup_left = target_position_2.copy() + np.array([0, 0, 0.12])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.12])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, -0.07])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+
+    open_gripper(right_gripper)
+    
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.15])
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
 
 
 # Python's syntax for a main() method
