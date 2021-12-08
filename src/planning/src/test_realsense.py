@@ -32,6 +32,14 @@ def get_robot_pointcloud(show_imgs=False):
     camera_intr = sensor.color_intrinsics
     color_im, depth_im = sensor.frames()
 
+    webcam_cfg = {}
+    webcam_cfg["device_id"] = 3
+    webcam_cfg["frame"] = "webcam"
+
+    webcam_sensor = RgbdSensorFactory.sensor("webcam", webcam_cfg)
+    webcam_sensor.start()
+    webcam_im, _ = webcam_sensor.frames()
+
     depth_im = depth_im.inpaint(0.1)
     point_cloud_cam = camera_intr.deproject(depth_im)
     point_cloud_cam.remove_zero_points()
@@ -112,8 +120,9 @@ def get_robot_pointcloud(show_imgs=False):
         plt.show()
 
     sensor.stop()
+    webcam_sensor.stop()
 
-    return point_cloud_robot, cup_left_top_pt_right_robot, cup_right_top_pt_right_robot
+    return point_cloud_robot, cup_left_top_pt_right_robot, cup_right_top_pt_right_robot, webcam_im
 
 if __name__ == "__main__":
     get_robot_pointcloud(show_imgs=True)

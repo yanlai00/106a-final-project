@@ -14,7 +14,8 @@ import baxter_interface
 import intera_interface
 
 from moveit_msgs.msg import RobotTrajectory
-
+from level_detection import get_percent_liquid, get_marker_edge
+from perception import RgbdSensorFactory
 
 
 class Controller(object):
@@ -84,6 +85,13 @@ class Controller(object):
         self._target_positions = list()
         self._target_velocities = list()
 
+        webcam_cfg = {}
+        webcam_cfg["device_id"] = 3
+        webcam_cfg["frame"] = "webcam"
+
+        self.webcam_sensor = RgbdSensorFactory.sensor("webcam", webcam_cfg)
+        self.webcam_sensor.start()
+
     
     def shutdown(self):
         """
@@ -94,6 +102,7 @@ class Controller(object):
         # Set velocities to zero
         self._limb.set_joint_velocities(dict(itertools.izip(self._limb.joint_names(), np.zeros(len(self._limb.joint_names())))))
         rospy.sleep(0.1)
+        self.webcam_sensor.stop()       
 
     def execute_path(self, path, timeout=100.0, log=True):
         """

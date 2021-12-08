@@ -19,6 +19,10 @@
 # - Rotation: in Quaternion [0.603, 0.572, -0.410, 0.375]
 #             in RPY (radian) [-3.097, 1.179, 1.547]
 #             in RPY (degree) [-177.472, 67.526, 88.632]
+# 
+# position: Neutral joint states
+# [0.3240888671875, -0.3903671875, 0.610984375, -0.042935546875, -1.4750556640625, -2.976302734375, -2.3462490234375, 1.5772646484375, 0.0]
+
 
 
 from autolab_core import RigidTransform
@@ -26,7 +30,7 @@ import numpy as np
 
 # T_robot_world 
 # trans1 = np.asarray([0.811, -0.084, -0.2])
-trans1 = np.asarray([0.84, -0.2, -0.2])
+trans1 = np.asarray([0.84, -0.2, -0.215])
 quat1 = np.asarray([1.000, -0.000, -0.000, 0.000]) #(wxyz)
 quat1 = quat1 / np.linalg.norm(quat1)
 
@@ -42,4 +46,4 @@ quat2 = quat2 / np.linalg.norm(quat2)
 rot2 = RigidTransform.rotation_from_quaternion(quat2)
 T_world_camera = RigidTransform(rotation=rot2, translation=trans2, from_frame="world", to_frame="camera")
 
-
+neutral_joint_state = np.array([-0.119646484375, -0.2901474609375, -0.2213916015625, 0.929955078125, -2.7966474609375, -0.955185546875, 1.5758310546875])

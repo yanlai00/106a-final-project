@@ -37,6 +37,11 @@ import geometry_msgs.msg as geom
 from math import pi
 from std_msgs.msg import String
 from moveit_commander.conversions import pose_to_list
+from camera_matrix import neutral_joint_state
+
+from level_detection import get_percent_liquid, get_marker_edge, show
+
+import cv2
 
 rospy.wait_for_service('compute_ik')
 rospy.init_node('service_query')
@@ -55,6 +60,21 @@ Kp = 0.2 * np.array([0.4, 2, 1.7, 1.5, 2, 2, 3])
 Kd = 0.01 * np.array([2, 1, 2, 0.5, 0.8, 0.8, 0.8])
 Ki = 0.01 * np.array([1.4, 1.4, 1.4, 1, 0.6, 0.6, 0.6])
 Kw = np.array([0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9])
+
+point_cloud_robot, cup_left_top_pt_right_robot, cup_right_top_pt_right_robot, webcam_im = get_robot_pointcloud()
+target_position_1 = cup_left_top_pt_right_robot.data
+target_position_2 = cup_right_top_pt_right_robot.data
+
+webcam_im = webcam_im.data
+
+left, right = 425, 905
+bottom = 630
+if left is None or right is None or bottom is None:
+    show(webcam_im)
+    left = int(raw_input("Left edge index"))
+    right = int(raw_input("right edge index"))
+    bottom = int(raw_input("bottom edge index"))
+top = get_marker_edge(webcam_im, left, right, bottom, vis=False)
 
 controller = Controller(Kp, Ki, Kd, Kw, Limb("right"))
 
@@ -220,14 +240,14 @@ def move_to_point_sequence(group, target_positions, target_orientations):
 
 def main(robo):
 
-    point_cloud_robot, cup_left_top_pt_right_robot, cup_right_top_pt_right_robot = get_robot_pointcloud()
-    target_position_1 = cup_left_top_pt_right_robot.data
-    target_position_2 = cup_right_top_pt_right_robot.data
-
     group = MoveGroupCommander("right_arm")
     group.set_max_acceleration_scaling_factor(0.1)
     group.set_max_velocity_scaling_factor(0.1)
     move_to_point = move_to_point_pid
+
+    print("go to neutral position")
+    group.go(neutral_joint_state)
+    print("arrived at neutral position")
 
     orien_const = OrientationConstraint()
     orien_const.link_name = "right_gripper";
@@ -242,15 +262,15 @@ def main(robo):
     move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0])
 
     point_up_cup_left = target_position_1.copy() + np.array([0, 0, -0.07])
-    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0],) # orien_const=orien_const)
 
     close_gripper(right_gripper)
 
     point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.12])
-    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
     point_up_cup_left = target_position_2.copy() + np.array([0, 0, 0.12])
-    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
     with open('/home/cc/ee106a/fl21/class/ee106a-aak/final/src/planning/src/traj3.txt') as trajectory_txt:
         lines = trajectory_txt.readlines()
@@ -308,18 +328,18 @@ def main(robo):
 
 
     point_up_cup_left = target_position_2.copy() + np.array([0, 0, 0.12])
-    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
     point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.12])
-    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
     point_up_cup_left = target_position_1.copy() + np.array([0, 0, -0.07])
-    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
     open_gripper(right_gripper)
     
     point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.15])
-    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], orien_const=orien_const)
+    move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
 
 # Python's syntax for a main() method
