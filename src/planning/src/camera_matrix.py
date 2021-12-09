@@ -1,8 +1,9 @@
 # T_robot_to_world:
-# - Translation: [0.906, -0.101, -0.066]
-# - Rotation: in Quaternion [0.999, -0.031, -0.013, -0.015]
-#             in RPY (radian) [-3.112, 0.026, -0.062]
-#             in RPY (degree) [-178.291, 1.513, -3.563]
+# - Translation: [0.841, -0.081, -0.069]
+# - Rotation: in Quaternion [1.000, 0.019, -0.019, 0.013]
+#             in RPY (radian) [3.116, 0.039, 0.037]
+#             in RPY (degree) [178.542, 2.216, 2.135]
+
 
 # # to get this 
 # roslaunch realsense2_camera/launch/rs_rgbd.launch
@@ -15,11 +16,11 @@
 # - Rotation: in Quaternion [0.590, 0.585, -0.413, 0.373]
 #             in RPY (radian) [-3.030, 1.178, 1.637]
 #             in RPY (degree) [-173.604, 67.494, 93.818
-# - Translation: [0.094, 0.185, 0.753]
-# - Rotation: in Quaternion [0.603, 0.572, -0.410, 0.375]
-#             in RPY (radian) [-3.097, 1.179, 1.547]
-#             in RPY (degree) [-177.472, 67.526, 88.632]
-# 
+# - Translation: [0.119, 0.216, 0.718]
+# - Rotation: in Quaternion [0.592, 0.549, -0.422, 0.412]
+#             in RPY (radian) [3.060, 1.260, 1.436]
+#             in RPY (degree) [175.322, 72.192, 82.262]
+
 # position: Neutral joint states
 # [0.3240888671875, -0.3903671875, 0.610984375, -0.042935546875, -1.4750556640625, -2.976302734375, -2.3462490234375, 1.5772646484375, 0.0]
 
@@ -30,7 +31,7 @@ import numpy as np
 
 # T_robot_world 
 # trans1 = np.asarray([0.811, -0.084, -0.2])
-trans1 = np.asarray([0.84, -0.2, -0.215])
+trans1 = np.asarray([0.841, -0.09, -0.2])
 quat1 = np.asarray([1.000, -0.000, -0.000, 0.000]) #(wxyz)
 quat1 = quat1 / np.linalg.norm(quat1)
 
@@ -39,8 +40,8 @@ T_world_robot = RigidTransform(rotation=rot1, translation=trans1, from_frame="wo
 # import pdb; pdb.set_trace()
 
 # T_camera_world 
-trans2 = np.asarray([0.094, 0.185, 0.753])
-quat2 = np.asarray([0.375, 0.603, 0.572, -0.410]) #(wxyz)
+trans2 = np.asarray([0.119, 0.216, 0.718])
+quat2 = np.asarray([0.412, 0.592, 0.549, -0.422]) #(wxyz)
 quat2 = quat2 / np.linalg.norm(quat2)
 
 rot2 = RigidTransform.rotation_from_quaternion(quat2)

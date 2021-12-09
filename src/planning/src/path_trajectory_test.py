@@ -77,7 +77,7 @@ if left is None or right is None or bottom is None:
     bottom = int(raw_input("bottom edge index"))
 top = get_marker_edge(webcam_im, left, right, bottom, vis=False)
 
-LIQUID_THRESHOLD = 0.8
+LIQUID_THRESHOLD = 0.4
 stop_condition = lambda img: (get_percent_liquid(img, left, right, top, bottom, vis=False) > LIQUID_THRESHOLD)
 
 controller = Controller(Kp, Ki, Kd, Kw, Limb("right"))
@@ -248,9 +248,9 @@ def main(robo):
     group = MoveGroupCommander("right_arm")
     move_to_point = move_to_point_pid
 
-    print("go to neutral position")
-    group.go(neutral_joint_state)
-    print("arrived at neutral position")
+    # print("go to neutral position")
+    # group.go(neutral_joint_state)
+    # print("arrived at neutral position")
 
     group.set_max_acceleration_scaling_factor(0.1)
     group.set_max_velocity_scaling_factor(0.1)
@@ -272,10 +272,10 @@ def main(robo):
 
     close_gripper(right_gripper)
 
-    point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.12])
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.15])
     move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
-    point_up_cup_left = target_position_2.copy() + np.array([0, 0, 0.12])
+    point_up_cup_left = target_position_2.copy() + np.array([0, 0, 0.15])
     move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
     with open('/home/cc/ee106a/fl21/class/ee106a-aak/final/src/planning/src/traj3.txt') as trajectory_txt:
@@ -298,9 +298,9 @@ def main(robo):
 
         # import pdb; pdb.set_trace()
         print(target_position_2)
-        offset_x = target_position_2[0] - float(trans_list[0][0])
+        offset_x = target_position_2[0] - float(trans_list[0][0]) - 0.01
         offset_y = target_position_2[1] - float(trans_list[0][1])
-        offset_z = 0.04
+        offset_z = 0.05
 
         new_trans_list = []
         new_quat_list = []
@@ -346,7 +346,7 @@ def main(robo):
     point_up_cup_left = target_position_1.copy() + np.array([0, 0, 0.12])
     move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
-    point_up_cup_left = target_position_1.copy() + np.array([0, 0, -0.07])
+    point_up_cup_left = target_position_1.copy() + np.array([0, 0, -0.03])
     move_to_point(group, point_up_cup_left, [1.0, 0.0, 0.0, 0.0], ) # orien_const=orien_const)
 
     open_gripper(right_gripper)

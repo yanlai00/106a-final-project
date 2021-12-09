@@ -59,10 +59,14 @@ def get_robot_pointcloud(show_imgs=False):
 
     point_cloud_world = T_world_camera.inverse() * point_cloud_cam
 
-    min_pt = np.array([-100, -0.4, 0.11])
+    min_pt = np.array([-100, -0.4, 0.10])
     max_pt = np.array([100, 100, 0.15])
     box = autolab_core.Box(min_pt, max_pt, frame=point_cloud_world.frame)
     point_cloud_world_cup, _ = point_cloud_world.box_mask(box)
+
+    if show_imgs:
+        v = pptk.viewer(point_cloud_world_cup.data.T)
+        import pdb; pdb.set_trace()
 
     kmeans = KMeans(n_clusters=2, random_state=0).fit(point_cloud_world_cup.data.T)
     labels = kmeans.labels_
@@ -87,17 +91,13 @@ def get_robot_pointcloud(show_imgs=False):
     print(dists.shape)
     cup_right = cup_right[:, dists<0.1]
 
-        
-
-    # v = pptk.viewer(cup_left.T)
-    # v = pptk.viewer(cup_right.T)
-    # import pdb; pdb.set_trace()
-
     cup_left_top_pt_right = autolab_core.PointCloud(cup_left[:, np.argmax(cup_left[1, :])], frame=point_cloud_world.frame)
     cup_right_top_pt_right = autolab_core.PointCloud(cup_right[:, np.argmax(cup_right[1, :])], frame=point_cloud_world.frame)
 
     if show_imgs:
         v = pptk.viewer(point_cloud_world.data.T)
+        v = pptk.viewer(cup_left.T)
+        v = pptk.viewer(cup_right.T)
         import pdb; pdb.set_trace()
 
     point_cloud_robot = T_world_robot * point_cloud_world

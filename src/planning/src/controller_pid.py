@@ -16,6 +16,7 @@ import intera_interface
 from moveit_msgs.msg import RobotTrajectory
 from level_detection import get_percent_liquid, get_marker_edge
 from perception import RgbdSensorFactory
+import matplotlib.pyplot as plt
 
 
 class Controller(object):
@@ -165,11 +166,13 @@ class Controller(object):
                 self._limb.set_joint_velocities(dict(itertools.izip(self._limb.joint_names(), np.zeros(len(self._limb.joint_names())))))
                 break
 
-            if stop_condition:
+            if stop_condition and self._curIndex > 20:
                 webcam_im, _ = self.webcam_sensor.frames()
                 webcam_im = webcam_im.data
                 if stop_condition(webcam_im):
                     # self._limb.set_joint_velocities(dict(itertools.izip(self._limb.joint_names(), np.zeros(len(self._limb.joint_names())))))
+                    plt.imshow(webcam_im)
+                    plt.savefig("/home/cc/ee106a/fl21/class/ee106a-aak/final/src/planning/visualization/stop.png")
                     break
 
         return True
