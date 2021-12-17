@@ -45,6 +45,10 @@ def get_robot_pointcloud(show_imgs=False):
     point_cloud_cam.remove_zero_points()
     point_cloud_cam.remove_infinite_points()
 
+    if show_imgs:
+        v = pptk.viewer(point_cloud_cam.data.T)
+        import pdb; pdb.set_trace()
+
     min_pt = np.array([-0.4, -0.2, 0.4])
     max_pt = np.array([0.4, 0.2, 1])
     box = autolab_core.Box(min_pt, max_pt, frame=point_cloud_cam.frame)
@@ -58,6 +62,10 @@ def get_robot_pointcloud(show_imgs=False):
     # point_cloud_cam.remove_zero_points()
 
     point_cloud_world = T_world_camera.inverse() * point_cloud_cam
+
+    if show_imgs:
+        v = pptk.viewer(point_cloud_world.data.T)
+        import pdb; pdb.set_trace()
 
     min_pt = np.array([-100, -0.4, 0.10])
     max_pt = np.array([100, 100, 0.15])

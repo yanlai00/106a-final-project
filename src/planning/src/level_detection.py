@@ -33,9 +33,9 @@ def mask_edge(img, get_marker=True):
     if get_marker:
         mask_entries = np.where(np.all(img<100, axis=-1)) # coke 
     else:
-        # mask_entries = np.where(img[:, :, 0]<70) # code with water
         mask_entries = np.where(img[:, :, 2]<100) # code with water
         # mask_entries = np.where(np.any(img < 100, axis=-1)) # beads
+        # mask_entries = np.where(img[:, :, 2]<130) # code with boba
     edges[mask_entries] = 1
     y_idx, x_idx = mask_entries
     if get_marker:
@@ -56,6 +56,10 @@ def show(img, point=None):
     if point is not None:
         y, x = point
         plt.plot(x, y, 'ro')
+    try:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    except:
+        img = img
     plt.imshow(img)
     plt.show()
 
@@ -97,10 +101,10 @@ if __name__ == "__main__":
     # get_marker_edge(img, left, right, bottom, vis=True)
 
     # # post empty cup 
-    img_path = "/home/cc/ee106a/fl21/class/ee106a-aak/Desktop/2021-12-08-230036.jpg"
+    img_path = "/home/cc/ee106a/fl21/class/ee106a-aak/Desktop/2021-12-16-211732.jpg"
     img = cv2.imread(img_path)
-    left, right = 514, 1300
-    top, bottom = 570, 925 # 557
+    left, right = 638, 1311
+    top, bottom = 590, 886
     if left is None or right is None or bottom is None:
         show(img)
         left = int(raw_input("Left edge index"))

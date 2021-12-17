@@ -16,10 +16,10 @@
 # - Rotation: in Quaternion [0.590, 0.585, -0.413, 0.373]
 #             in RPY (radian) [-3.030, 1.178, 1.637]
 #             in RPY (degree) [-173.604, 67.494, 93.818
-# - Translation: [0.119, 0.216, 0.718]
-# - Rotation: in Quaternion [0.592, 0.549, -0.422, 0.412]
-#             in RPY (radian) [3.060, 1.260, 1.436]
-#             in RPY (degree) [175.322, 72.192, 82.262]
+# - Translation: [0.145, 0.090, 0.813]
+# - Rotation: in Quaternion [0.630, 0.565, -0.361, 0.393]
+#             in RPY (radian) [2.943, 1.115, 1.339]
+#             in RPY (degree) [168.617, 63.911, 76.695]
 
 # position: Neutral joint states
 # [0.3240888671875, -0.3903671875, 0.610984375, -0.042935546875, -1.4750556640625, -2.976302734375, -2.3462490234375, 1.5772646484375, 0.0]
@@ -31,7 +31,7 @@ import numpy as np
 
 # T_robot_world 
 # trans1 = np.asarray([0.811, -0.084, -0.2])
-trans1 = np.asarray([0.841, -0.09, -0.2])
+trans1 = np.asarray([0.771, -0.054, -0.2])
 quat1 = np.asarray([1.000, -0.000, -0.000, 0.000]) #(wxyz)
 quat1 = quat1 / np.linalg.norm(quat1)
 
@@ -40,8 +40,8 @@ T_world_robot = RigidTransform(rotation=rot1, translation=trans1, from_frame="wo
 # import pdb; pdb.set_trace()
 
 # T_camera_world 
-trans2 = np.asarray([0.119, 0.216, 0.718])
-quat2 = np.asarray([0.412, 0.592, 0.549, -0.422]) #(wxyz)
+trans2 = np.asarray([0.145, 0.090, 0.813])
+quat2 = np.asarray([0.393, 0.630, 0.565, -0.361]) #(wxyz)
 quat2 = quat2 / np.linalg.norm(quat2)
 
 rot2 = RigidTransform.rotation_from_quaternion(quat2)
